@@ -1,0 +1,75 @@
+.dashboard-page {
+  min-height: 100vh;
+  padding: 30px 20px;
+  background: #f3f4f6;
+  font-family: Arial, sans-serif;
+}
+
+.dashboard-content {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.welcome-section {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.dashboard-card {
+  padding: 25px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.profile-icon {
+  width: 60px;
+  height: 60px;
+  margin: 15px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #2563eb;
+  color: white;
+  font-size: 25px;
+}
+
+.profile-details,
+.dashboard-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 10px 0;
+  border-bottom: 1px solid #ddd;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-card input,
+.dashboard-card textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.dashboard-card button {
+  margin-top: 10px;
+  padding: 11px 15px;
+  border: none;
+  border-radius: 6px;
+  background: #2563eb;
+  color: white;
+  cursor: pointer;
+}
+
+.dashboard-card button:hover {
+  background: #1d4ed8;
+}

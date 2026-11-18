@@ -1,513 +1,210 @@
-/* ============ AUTH PAGES (Login / Register) ============ */
-.auth-page {
-  min-height: 100vh;
+/* =========================================
+   VIEW PRODUCTS PAGE - REFERENCE LAYOUT
+========================================= */
+
+/* Main product page */
+.workspace .workspace-content {
+  flex: 1;
+  min-width: 0;
+  padding: 32px 38px;
+}
+
+/* Products heading */
+.workspace .topbar {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  padding: 40px 16px;
-  position: relative;
-  overflow: hidden;
-  background:
-    radial-gradient(circle at 15% 25%, #dbe6fb 0%, transparent 40%),
-    radial-gradient(circle at 85% 75%, #e5e7eb 0%, transparent 35%), #f8f9fb;
+  gap: 15px;
+  margin-bottom: 25px;
 }
 
-.blob {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-}
-.blob-blue {
-  width: 260px;
-  height: 260px;
-  top: -100px;
-  left: -80px;
-  background: #b4c8f5;
-  filter: blur(2px);
-}
-.blob-grey {
-  width: 260px;
-  height: 260px;
-  bottom: -120px;
-  right: -80px;
-  background: #cfd1d6;
-}
-
-.auth-card {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  max-width: 344px;
-  background: var(--white);
-  border-radius: 20px;
-  padding: 35px;
-  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.1);
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 34px;
-}
-.brand-logo {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  background: var(--blue);
-  color: #fff;
-  font-weight: 800;
-  font-size: 18px;
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-}
-.brand-name {
-  font-size: 18px;
+.workspace .topbar h1 {
+  margin: 0;
+  font-size: 26px;
   font-weight: 700;
-  color: var(--ink);
-}
-.brand-sub {
-  font-size: 10px;
-  color: var(--muted);
-  margin-top: 3px;
 }
 
-.eyebrow {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 1.6px;
-  color: var(--blue);
-  text-transform: uppercase;
+/* Student USN */
+.workspace .usn-badge {
+  padding: 10px 17px;
+  border-radius: 25px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
-.auth-card h1 {
-  font-size: 22px;
-  margin: 8px 0 14px;
-}
-.auth-card .lead {
-  font-size: 11px;
-  color: var(--muted);
-  margin-bottom: 26px;
-}
-
-.field {
+/* Search, category and sorting */
+.workspace .product-toolbar {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 14px;
   margin-bottom: 22px;
 }
-.field label {
-  display: block;
-  font-size: 10px;
-  font-weight: 700;
-  margin-bottom: 10px;
-}
-.field input {
+
+.workspace .product-toolbar input,
+.workspace .product-toolbar select {
   width: 100%;
-  height: 37px;
-  border: 1px solid #d9dce1;
-  border-radius: 10px;
-  background: #fafafb;
-  padding: 0 12px;
-  font-size: 11px;
+  min-width: 0;
+  height: 44px;
+  padding: 0 13px;
+  color: #263638;
+  font-size: 14px;
   outline: none;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
-}
-.field input:focus {
-  border-color: var(--blue);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-  background: #fff;
 }
 
-.btn-primary {
-  width: 100%;
-  height: 36px;
-  border: none;
-  border-radius: 10px;
-  background: var(--blue);
-  color: #fff;
-  font-weight: 700;
-  font-size: 12px;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.btn-primary:hover {
-  background: var(--blue-dark);
-}
-.btn-primary:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
+/* Product count */
+.workspace .product-result-count {
+  margin-bottom: 15px;
 }
 
-.auth-footer {
-  text-align: center;
-  font-size: 10px;
-  color: var(--muted);
-  margin-top: 22px;
-}
-.auth-footer a {
-  color: var(--blue);
-  font-weight: 700;
-  margin-left: 4px;
-}
-
-.alert {
-  font-size: 11px;
-  padding: 9px 12px;
-  border-radius: 8px;
-  margin-bottom: 16px;
-}
-.alert-error {
-  background: #fef2f2;
-  color: var(--red);
-  border: 1px solid #fecaca;
-}
-.alert-success {
-  background: #f0fdf4;
-  color: var(--green);
-  border: 1px solid #bbf7d0;
-}
-
-/* ============ DASHBOARD ============ */
-.topbar {
-  background: var(--bg);
-  border-bottom: 1px solid var(--line);
-}
-.topbar-inner {
-  max-width: 1190px;
-  margin: 0 auto;
-  padding: 16px 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.topbar .brand {
-  margin: 0;
-}
-.topbar .brand-logo {
-  width: 43px;
-  height: 43px;
-  font-size: 20px;
-}
-.topbar .brand-sub {
-  font-weight: 700;
-}
-.topbar nav {
-  display: flex;
-  align-items: center;
-  gap: 26px;
-}
-.nav-link {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--muted);
-}
-.nav-link.active {
-  color: var(--blue);
-}
-.btn-logout {
-  border: 1.5px solid var(--ink);
-  background: #fff;
-  color: var(--ink);
-  border-radius: 8px;
-  padding: 9px 16px;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.btn-logout:hover {
-  background: var(--ink);
-  color: #fff;
-}
-
-.dash {
-  max-width: 1190px;
-  margin: 0 auto;
-  padding: 56px 24px 48px;
-}
-.dash-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 24px;
-  margin-bottom: 36px;
-}
-.dash-head h1 {
-  font-size: 38px;
-  margin: 10px 0 8px;
-}
-.dash-head p {
-  color: var(--muted);
-  font-size: 14px;
-}
-
-.mini-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 14px 16px;
-  min-width: 244px;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
-  color: var(--ink);
-}
-.mini-card:hover {
-  border-color: var(--blue);
-}
-.avatar {
-  width: 43px;
-  height: 43px;
-  border-radius: 10px;
-  background: var(--blue);
-  color: #fff;
-  font-weight: 800;
+/* Two-column product layout */
+.workspace .product-grid {
   display: grid;
-  place-items: center;
-}
-.mini-card strong {
-  font-size: 13px;
-  display: block;
-}
-.mini-card small {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--blue);
-}
-.mini-card .arrow {
-  margin-left: auto;
-  color: var(--blue);
-  font-size: 20px;
-}
-
-.dash-grid {
-  display: grid;
-  grid-template-columns: 1.15fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
 }
-.hero-card {
-  border: 1px solid #c9d8f7;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #e8eefc 0%, #f3f6fd 100%);
-  padding: 36px;
+
+/* Individual product card */
+.workspace .product-card {
+  min-width: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-}
-.hero-card h2 {
-  font-size: 26px;
-  margin: 8px 0 14px;
-}
-.hero-card p {
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--muted);
-  max-width: 480px;
-  margin-bottom: 22px;
-}
-.btn-small {
-  display: inline-block;
-  width: fit-content;
-  background: var(--blue);
-  color: #fff;
-  font-weight: 700;
-  font-size: 13px;
-  border-radius: 8px;
-  padding: 11px 18px;
-}
-.btn-small:hover {
-  background: var(--blue-dark);
+  border-radius: 15px;
+  transition: box-shadow 0.25s ease;
 }
 
-.stat-list {
+.workspace .product-image-wrapper {
+  width: 100%;
+  height: 180px;
+  overflow: hidden;
+  border-radius: 12px 12px 0 0;
+}
+
+.workspace .product-image,
+.workspace .product-image-placeholder {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Product information */
+.workspace .product-card-body {
   display: flex;
   flex-direction: column;
-  gap: 13px;
+  flex: 1;
+  gap: 11px;
+  padding: 17px;
 }
-.stat-card {
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 22px 20px;
-}
-.stat-label {
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 1.4px;
-  color: var(--muted);
-}
-.stat-value {
+
+.workspace .product-card-body h3 {
   font-size: 18px;
   font-weight: 700;
-  margin: 10px 0 6px;
-  word-break: break-all;
-}
-.stat-hint {
-  font-size: 10px;
-  color: var(--muted);
-}
-.status-active {
-  color: var(--ink);
+  margin: 0;
 }
 
-.details-card {
-  margin-top: 26px;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  padding: 26px 28px;
-}
-.details-card h3 {
-  font-size: 17px;
-  margin: 8px 0 18px;
-}
-.details-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 18px;
-}
-.details-grid .stat-value {
-  font-size: 14px;
-}
-.empty {
-  color: #9ca3af;
-  font-weight: 400;
-  font-style: italic;
+.workspace .product-price {
+  font-size: 19px;
+  font-weight: 700;
 }
 
-.loading {
-  min-height: 60vh;
-  display: grid;
-  place-items: center;
-  color: var(--muted);
-}
-
-/* ============ PROFILE ============ */
-.profile-nav {
-  background: var(--ink);
-}
-.profile-nav-inner {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 0 36px;
-  height: 35px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.profile-nav .logo-text {
-  color: #fff;
-  font-weight: 800;
+.workspace .product-description {
+  color: #718486;
   font-size: 13px;
+  line-height: 1.6;
+  min-height: 40px;
+  margin: 0;
 }
-.profile-nav nav {
+
+/* Category and stock */
+.workspace .product-card-info {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 12px;
-}
-.profile-nav .nav-link {
-  color: #fff;
-  font-size: 8px;
-}
-.profile-nav .btn-logout {
-  background: transparent;
-  color: #fff;
-  border: 1px solid #fff;
-  font-size: 9px;
-  padding: 5px 8px;
-  border-radius: 4px;
-}
-.profile-nav .btn-logout:hover {
-  background: #fff;
-  color: var(--ink);
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.profile-page {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 36px 16px 48px;
-}
-.profile-page .eyebrow {
-  font-size: 9px;
-}
-.profile-page h1 {
-  font-size: 22px;
-  margin: 6px 0 8px;
-}
-.profile-page .lead {
-  font-size: 9px;
-  margin-bottom: 18px;
-}
-
-.profile-grid {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr;
-  gap: 10px;
-  align-items: stretch;
-}
-.panel {
-  background: #fff;
-  border: 1px solid var(--ink);
+.workspace .category-pill {
+  padding: 6px 10px;
   border-radius: 6px;
-  padding: 15px 15px 20px;
-}
-.panel h2 {
-  font-size: 11px;
-  margin-bottom: 2px;
-}
-.panel .field {
-  margin-bottom: 9px;
-}
-.panel .field label {
-  font-size: 7px;
-  margin-bottom: 4px;
-}
-.panel .field input,
-.panel .field select {
-  width: 100%;
-  height: 23px;
-  border: 1px solid #c6c9cf;
-  border-radius: 4px;
-  padding: 0 8px;
-  font-size: 8px;
-  background: #fff;
-  outline: none;
-}
-.panel .field select {
-  font-size: 8px;
-  cursor: pointer;
-}
-.panel .field input:focus,
-.panel .field select:focus {
-  border-color: var(--blue);
-}
-.panel .btn-primary {
-  height: 23px;
-  font-size: 8px;
-  border-radius: 4px;
-  margin-top: 3px;
-  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.25);
-}
-.panel .alert {
-  font-size: 8px;
-  padding: 6px 8px;
-  margin: 6px 0;
+  font-size: 12px;
 }
 
-/* ============ RESPONSIVE ============ */
-@media (max-width: 860px) {
-  .dash-grid,
-  .profile-grid {
+.workspace .stock-text {
+  color: #718486;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Product buttons */
+.workspace .btn-card-full {
+  width: 100%;
+  min-height: 40px;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 2px;
+}
+
+.workspace a.btn-card-full {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.workspace button.btn-card-full:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Message boxes */
+.workspace .alert {
+  margin-bottom: 16px;
+  padding: 12px 15px;
+  border-radius: 9px;
+}
+
+/* Mobile and tablet layout */
+@media (max-width: 900px) {
+  .workspace .workspace-content {
+    padding: 25px 20px;
+  }
+
+  .workspace .product-toolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .workspace .product-toolbar input {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 600px) {
+  .workspace .workspace-content {
+    padding: 20px 14px;
+  }
+
+  .workspace .product-grid {
     grid-template-columns: 1fr;
   }
-  .dash-head {
-    flex-direction: column;
+
+  .workspace .product-toolbar {
+    grid-template-columns: 1fr;
   }
-  .dash-head h1 {
-    font-size: 30px;
+
+  .workspace .product-toolbar input {
+    grid-column: auto;
   }
-  .topbar nav {
-    gap: 14px;
+
+  .workspace .topbar h1 {
+    font-size: 21px;
+  }
+
+  .workspace .product-image-wrapper {
+    height: 190px;
   }
 }

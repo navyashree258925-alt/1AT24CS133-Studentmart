@@ -3,94 +3,109 @@ import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 
 export default function Login() {
-  const navigate = useNavigate();
-  const [form, setForm] = useState({ email: "", password: "" });
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
+  async function handleLogin(e) {
     e.preventDefault();
+
     setError("");
-
-    if (!form.email || !form.password) {
-      return setError("Please fill in all fields");
-    }
-
     setLoading(true);
 
     try {
       const data = await api("/auth/login", {
         method: "POST",
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+        }),
       });
 
-      localStorage.setItem("token", data.token);
-      navigate("/dashboard");
-    } catch (err) {
-      setError(err.message);
+      if (data.token && data.student) {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("student", JSON.stringify(data.student));
+
+        navigate("/dashboard", { replace: true });
+      } else {
+        setError(data.message || "Login failed.");
+      }
+    } catch (error) {
+      setError(error.message || "Unable to connect to server.");
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
-    <div className="auth-page">
-      <div className="blob blob-blue" />
-      <div className="blob blob-grey" />
-
+    <div className="auth-container">
       <div className="auth-card">
-        <div className="brand">
-          <div className="brand-logo">S</div>
-          <div>
-            <div className="brand-name">StudentMart</div>
-            <div className="brand-sub">Student Profile Management</div>
-          </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            marginBottom: "20px",
+          }}
+        >
+          <div className="sidebar-logo-icon">S</div>
+
+          <span style={{ fontWeight: "700", fontSize: "18px" }}>
+            StudentMart
+          </span>
         </div>
 
-        <p className="eyebrow">Welcome back</p>
-        <h1>Sign in to your account</h1>
-        <p className="lead">Enter your credentials to continue.</p>
+        <h2>Sign in to your account</h2>
+        <p>Enter your credentials to continue.</p>
 
-        {error && <div className="alert alert-error">{error}</div>}
+        {error && (
+          <div
+            style={{
+              color: "#D9534F",
+              fontSize: "13px",
+              marginBottom: "12px",
+            }}
+          >
+            {error}
+          </div>
+        )}
 
-        <form onSubmit={handleSubmit}>
-          <div className="field">
-            <label htmlFor="email">Email</label>
+        <form onSubmit={handleLogin}>
+          <div className="form-group">
+            <label>Email</label>
+
             <input
-              id="email"
-              name="email"
               type="email"
               placeholder="Enter your email"
-              value={form.email}
-              onChange={handleChange}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
             />
           </div>
 
-          <div className="field">
-            <label htmlFor="password">Password</label>
+          <div className="form-group">
+            <label>Password</label>
+
             <input
-              id="password"
-              name="password"
               type="password"
               placeholder="Enter your password"
-              value={form.password}
-              onChange={handleChange}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
             />
           </div>
 
-          <button className="btn-primary" type="submit" disabled={loading}>
-            {loading ? "Signing in..." : "Login"}
+          <button type="submit" className="btn-primary" disabled={loading}>
+            {loading ? "Logging in..." : "Login"}
           </button>
         </form>
 
-        <p className="auth-footer">
-          Don't have an account?
-          <Link to="/register">Create Account</Link>
-        </p>
+        <div className="auth-footer">
+          Don't have an account? <Link to="/register">Create Account</Link>
+        </div>
       </div>
     </div>
   );

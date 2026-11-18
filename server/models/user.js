@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
@@ -33,7 +33,7 @@ const userSchema = new mongoose.Schema(
 
     year: {
       type: String,
-      default: "",
+      default: "2nd Year",
     },
 
     address: {
@@ -41,7 +41,11 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
   },
-  { timestamps: true },
+  {
+    timestamps: true,
+  },
 );
 
-module.exports = mongoose.model("User", userSchema);
+const User = mongoose.models.User || mongoose.model("User", userSchema);
+
+export default User;

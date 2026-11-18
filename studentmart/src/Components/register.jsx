@@ -3,136 +3,137 @@ import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 
 export default function Register() {
-  const navigate = useNavigate();
-
-  const [form, setForm] = useState({
-    usn: "",
-    email: "",
-    password: "",
-    confirm: "",
-  });
+  const [usn, setUsn] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
+  async function handleRegister(e) {
     e.preventDefault();
+
     setError("");
-
-    if (!form.usn || !form.email || !form.password || !form.confirm) {
-      return setError("Please fill in all fields");
-    }
-
-    if (form.password.length < 6) {
-      return setError("Password must be at least 6 characters");
-    }
-
-    if (form.password !== form.confirm) {
-      return setError("Passwords do not match");
-    }
-
     setLoading(true);
 
     try {
       const data = await api("/auth/register", {
         method: "POST",
         body: JSON.stringify({
-          usn: form.usn,
-          email: form.email,
-          password: form.password,
+          usn: usn.trim().toUpperCase(),
+          name: name.trim(),
+          email: email.trim().toLowerCase(),
+          password,
         }),
       });
 
-      localStorage.setItem("token", data.token);
-      navigate("/dashboard");
-    } catch (err) {
-      setError(err.message);
+      if (data.student) {
+        alert("Registration successful! Please login.");
+        navigate("/", { replace: true });
+      } else {
+        setError(data.message || "Registration failed.");
+      }
+    } catch (error) {
+      setError(error.message || "Unable to connect to server.");
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
-    <div className="auth-page">
-      <div className="blob blob-blue" />
-      <div className="blob blob-grey" />
-
+    <div className="auth-container">
       <div className="auth-card">
-        <div className="brand">
-          <div className="brand-logo">S</div>
-          <div>
-            <div className="brand-name">StudentMart</div>
-            <div className="brand-sub">Student Profile Management</div>
-          </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            marginBottom: "20px",
+          }}
+        >
+          <div className="sidebar-logo-icon">S</div>
+
+          <span style={{ fontWeight: "700", fontSize: "18px" }}>
+            StudentMart
+          </span>
         </div>
 
-        <p className="eyebrow">Get started</p>
-        <h1>Create your account</h1>
-        <p className="lead">Register with your USN and email.</p>
+        <h2>Create your account</h2>
+        <p>Register with your student details.</p>
 
-        {error && <div className="alert alert-error">{error}</div>}
+        {error && (
+          <div
+            style={{
+              color: "#D9534F",
+              fontSize: "13px",
+              marginBottom: "12px",
+            }}
+          >
+            {error}
+          </div>
+        )}
 
-        <form onSubmit={handleSubmit}>
-          <div className="field">
-            <label htmlFor="usn">USN</label>
+        <form onSubmit={handleRegister}>
+          <div className="form-group">
+            <label>USN</label>
+
             <input
-              id="usn"
-              name="usn"
-              placeholder="e.g. 1AT24CS10"
-              value={form.usn}
-              onChange={handleChange}
+              type="text"
+              placeholder="e.g. 1AT24CS133"
+              value={usn}
+              onChange={(e) => setUsn(e.target.value)}
+              required
             />
           </div>
 
-          <div className="field">
-            <label htmlFor="email">Email</label>
+          <div className="form-group">
+            <label>Full Name</label>
+
             <input
-              id="email"
-              name="email"
+              type="text"
+              placeholder="Enter your full name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Email</label>
+
+            <input
               type="email"
               placeholder="Enter your email"
-              value={form.email}
-              onChange={handleChange}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
             />
           </div>
 
-          <div className="field">
-            <label htmlFor="password">Password</label>
+          <div className="form-group">
+            <label>Password</label>
+
             <input
-              id="password"
-              name="password"
               type="password"
               placeholder="Minimum 6 characters"
-              value={form.password}
-              onChange={handleChange}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              minLength={6}
+              required
             />
           </div>
 
-          <div className="field">
-            <label htmlFor="confirm">Confirm Password</label>
-            <input
-              id="confirm"
-              name="confirm"
-              type="password"
-              placeholder="Re-enter your password"
-              value={form.confirm}
-              onChange={handleChange}
-            />
-          </div>
-
-          <button className="btn-primary" type="submit" disabled={loading}>
-            {loading ? "Creating account..." : "Create Account"}
+          <button type="submit" className="btn-primary" disabled={loading}>
+            {loading ? "Creating Account..." : "Create Account"}
           </button>
         </form>
 
-        <p className="auth-footer">
-          Already have an account?
-          <Link to="/">Login</Link>
-        </p>
+        <div className="auth-footer">
+          Already have an account? <Link to="/">Login</Link>
+        </div>
       </div>
     </div>
   );

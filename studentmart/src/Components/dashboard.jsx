@@ -1,143 +1,222 @@
 import { useEffect, useState } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
-import { api } from "../api.js";
+import { Link } from "react-router-dom";
 import Logout from "./Logout.jsx";
+import "./Dashboard.css";
 
 export default function Dashboard() {
-  const navigate = useNavigate();
-  const [student, setStudent] = useState(null);
-  const [error, setError] = useState("");
+  const [cartCount, setCartCount] = useState(0);
+
+  const [student] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("student") || "null");
+    } catch {
+      return null;
+    }
+  });
 
   useEffect(() => {
-    api("/student/me")
-      .then((data) => setStudent(data.student || data))
-      .catch((err) => {
-        setError(err.message);
+    const updateCartCount = () => {
+      try {
+        const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+        const count = cart.reduce(
+          (total, item) => total + Number(item.quantity || 1),
+          0,
+        );
+        setCartCount(count);
+      } catch {
+        setCartCount(0);
+      }
+    };
 
-        if (!localStorage.getItem("token")) {
-          navigate("/", { replace: true });
-        }
-      });
-  }, [navigate]);
+    updateCartCount();
+    window.addEventListener("storage", updateCartCount);
 
-  const show = (value) => value || <span className="empty">Not added yet</span>;
+    return () => {
+      window.removeEventListener("storage", updateCartCount);
+    };
+  }, []);
 
   return (
-    <>
-      <header className="topbar">
-        <div className="topbar-inner">
-          <div className="brand">
-            <div className="brand-logo">S</div>
-            <div>
-              <div className="brand-name">StudentMart</div>
-              <div className="brand-sub">Student Portal</div>
-            </div>
+    <div className="workspace">
+      {/* SIDEBAR */}
+      <aside className="sidebar">
+        <div className="sidebar-brand-box">
+          <div className="sidebar-logo-icon">S</div>
+          <h2 className="sidebar-brand">StudentMart</h2>
+        </div>
+
+        <p className="sidebar-heading">STUDENT WORKSPACE</p>
+
+        <nav className="sidebar-nav">
+          <Link to="/dashboard" className="active">
+            <span>⌂</span>
+            Dashboard
+          </Link>
+
+          {/* SECOND: MY PROFILE */}
+          <Link to="/profile">
+            <span>♙</span>
+            My Profile
+          </Link>
+
+          {/* THIRD: VIEW PRODUCTS */}
+          <Link to="/products">
+            <span>▣</span>
+            View Products
+          </Link>
+
+          <Link to="/add-product">
+            <span>＋</span>
+            Add Product
+          </Link>
+
+          <Link to="/cart">
+            <span>🛒</span>
+            Shopping Cart
+            <span className="cart-count">{cartCount}</span>
+          </Link>
+        </nav>
+
+        <div className="sidebar-bottom">
+          <div className="sidebar-message">
+            <span>✦</span>
+            <p>Your student marketplace, all in one place.</p>
           </div>
 
-          <nav>
-            <NavLink to="/dashboard" className="nav-link">
-              Dashboard
-            </NavLink>
-            <NavLink to="/profile" className="nav-link">
-              Profile
-            </NavLink>
+          <div className="sidebar-logout">
             <Logout />
-          </nav>
+          </div>
         </div>
-      </header>
+      </aside>
 
-      {!student ? (
-        <div className="loading">{error || "Loading your dashboard..."}</div>
-      ) : (
-        <main className="dash">
-          <div className="dash-head">
-            <div>
-              <p className="eyebrow">Student Dashboard</p>
-              <h1>Welcome back{student.name ? `, ${student.name}` : "!"}</h1>
-              <p>Manage your student account from one place.</p>
-            </div>
+      {/* MAIN DASHBOARD */}
+      <main className="workspace-content dashboard-content">
+        {/* HEADER */}
+        <header className="dashboard-header">
+          <div>
+            <p className="header-small">STUDENTMART / OVERVIEW</p>
+            <h1>Dashboard</h1>
+            <p className="header-subtitle">
+              Your personal student shopping space.
+            </p>
+          </div>
 
-            <Link to="/profile" className="mini-card">
-              <div className="avatar">{student.usn?.charAt(0) || "S"}</div>
+          {student?.usn && (
+            <div className="student-usn">
+              <span className="usn-circle">S</span>
               <div>
-                <strong>{show(student.usn)}</strong>
-                <small>Edit Profile</small>
+                <small>STUDENT USN</small>
+                <strong>{student.usn}</strong>
               </div>
-              <span className="arrow">→</span>
+            </div>
+          )}
+        </header>
+
+        {/* WELCOME BANNER */}
+        <section className="welcome-banner">
+          <div className="welcome-content">
+            <span className="welcome-label">✦ YOUR SPACE. YOUR JOURNEY.</span>
+
+            <h2>Hello, {student?.name || "Student"}!</h2>
+
+            <p>
+              Welcome to StudentMart. Manage your student profile, explore
+              useful products and enjoy your shopping experience.
+            </p>
+
+            <Link to="/profile" className="welcome-button">
+              View My Profile <span>→</span>
             </Link>
           </div>
 
-          <div className="dash-grid">
-            <section className="hero-card">
-              <p className="eyebrow">StudentMart</p>
-              <h2>Your student account</h2>
-              <p>
-                Your profile is successfully connected to StudentMart. You can
-                manage your account information from the profile section.
-              </p>
-              <Link to="/profile" className="btn-small">
-                Edit Profile
-              </Link>
-            </section>
-
-            <section className="stat-list">
-              <div className="stat-card">
-                <div className="stat-label">USN</div>
-                <div className="stat-value">{show(student.usn)}</div>
-                <div className="stat-hint">Student identification number</div>
-              </div>
-
-              <div className="stat-card">
-                <div className="stat-label">EMAIL</div>
-                <div className="stat-value">{show(student.email)}</div>
-                <div className="stat-hint">Registered email address</div>
-              </div>
-
-              <div className="stat-card">
-                <div className="stat-label">ACCOUNT</div>
-                <div className="stat-value status-active">
-                  {student.isActive ? "Active" : "Inactive"}
-                </div>
-                <div className="stat-hint">
-                  Your account is {student.isActive ? "active" : "inactive"}
-                </div>
-              </div>
-            </section>
+          <div className="welcome-art">
+            <div className="art-circle art-circle-one"></div>
+            <div className="art-circle art-circle-two"></div>
+            <div className="art-center">
+              <span>✦</span>
+            </div>
+            <span className="art-star star-one">✧</span>
+            <span className="art-star star-two">✦</span>
           </div>
 
-          <section className="details-card">
-            <p className="eyebrow">Academic details</p>
-            <h3>Profile information</h3>
+          <div className="banner-bottom-text">
+            MAKE EVERY STUDENT DAY EASIER
+          </div>
+        </section>
 
-            <div className="details-grid">
-              <div>
-                <div className="stat-label">NAME</div>
-                <div className="stat-value">{show(student.name)}</div>
-              </div>
-
-              <div>
-                <div className="stat-label">PHONE</div>
-                <div className="stat-value">{show(student.phone)}</div>
-              </div>
-
-              <div>
-                <div className="stat-label">COLLEGE</div>
-                <div className="stat-value">{show(student.college)}</div>
-              </div>
-
-              <div>
-                <div className="stat-label">COURSE</div>
-                <div className="stat-value">{show(student.course)}</div>
-              </div>
-
-              <div>
-                <div className="stat-label">SEMESTER / YEAR</div>
-                <div className="stat-value">{show(student.year)}</div>
-              </div>
+        {/* QUICK ACCESS */}
+        <section className="quick-section">
+          <div className="section-heading">
+            <div>
+              <span className="section-eyebrow">YOUR ACTIVITIES</span>
+              <h2>Your Workspace</h2>
+              <p>Everything you need, just one click away.</p>
             </div>
-          </section>
-        </main>
-      )}
-    </>
+            <span className="section-decoration">✦</span>
+          </div>
+
+          <div className="quick-cards">
+            <Link to="/profile" className="quick-card">
+              <div className="quick-card-top">
+                <div className="quick-icon">♙</div>
+                <span className="quick-number">01</span>
+              </div>
+
+              <h3>My Profile</h3>
+
+              <p>
+                View your student information and keep your personal details
+                updated.
+              </p>
+
+              <div className="quick-card-link">
+                Manage Profile <span>→</span>
+              </div>
+            </Link>
+
+            <Link to="/add-product" className="quick-card">
+              <div className="quick-card-top">
+                <div className="quick-icon">＋</div>
+                <span className="quick-number">02</span>
+              </div>
+
+              <h3>Add Product</h3>
+
+              <p>
+                Share a new product with the StudentMart student marketplace.
+              </p>
+
+              <div className="quick-card-link">
+                Add Product <span>→</span>
+              </div>
+            </Link>
+
+            <Link to="/cart" className="quick-card">
+              <div className="quick-card-top">
+                <div className="quick-icon">🛍</div>
+                <span className="quick-number">03</span>
+              </div>
+
+              <h3>Shopping Cart</h3>
+
+              <p>
+                You currently have {cartCount} item(s) in your shopping cart.
+              </p>
+
+              <div className="quick-card-link">
+                View Cart <span>→</span>
+              </div>
+            </Link>
+          </div>
+        </section>
+
+        {/* BOTTOM MESSAGE */}
+        <footer className="dashboard-footer">
+          <span>✦</span>
+          <p>StudentMart — A smarter marketplace for students.</p>
+          <span className="footer-right">STUDENT EDITION</span>
+        </footer>
+      </main>
+    </div>
   );
 }

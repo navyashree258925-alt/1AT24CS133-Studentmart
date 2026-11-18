@@ -1,129 +1,134 @@
 import express from "express";
 import bcrypt from "bcryptjs";
-import Student from "../models/student.js";
-import auth from "../middleware/authmiddleware.js";
+import Student from "../models/Student.js";
+import authMiddleware from "../middleware/authmiddleware.js";
 
 const router = express.Router();
 
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const phonePattern = /^[0-9+\-\s]{7,15}$/;
-
-const YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
-
-const str = (value) => (typeof value === "string" ? value.trim() : "");
-
-// VIEW PROFILE
-router.get("/me", auth, async (req, res, next) => {
+// GET STUDENT PROFILE
+router.get("/me", authMiddleware, async (req, res) => {
   try {
     const student = await Student.findById(req.studentId).select("-password");
 
     if (!student) {
-      return res.status(404).json({ message: "Student not found" });
+      return res.status(404).json({
+        message: "Student not found",
+      });
     }
 
-    return res.json(student);
-  } catch (err) {
-    next(err);
+    res.status(200).json({ student });
+  } catch (error) {
+    res.status(500).json({
+      message: "Unable to get student profile",
+    });
   }
 });
 
-// EDIT PROFILE
-router.put("/me", auth, async (req, res, next) => {
+// UPDATE STUDENT PROFILE
+router.put("/me", authMiddleware, async (req, res) => {
   try {
     const { name, email, phone, college, course, year } = req.body;
 
-    if (!emailPattern.test(str(email))) {
-      return res.status(400).json({ message: "Enter a valid email" });
+    if (!name || !email) {
+      return res.status(400).json({
+        message: "Name and email are required",
+      });
     }
 
-    if (str(phone) && !phonePattern.test(str(phone))) {
-      return res.status(400).json({ message: "Enter a valid phone number" });
-    }
+    const normalizedEmail = email.trim().toLowerCase();
 
-    if (year && !YEARS.includes(year)) {
-      return res.status(400).json({ message: "Invalid year" });
-    }
-
-    const normalizedEmail = str(email).toLowerCase();
-
-    const taken = await Student.findOne({
+    const existingEmail = await Student.findOne({
       email: normalizedEmail,
       _id: { $ne: req.studentId },
     });
 
-    if (taken) {
+    if (existingEmail) {
       return res.status(409).json({
-        message: "This email is already registered",
+        message: "Email is already in use",
       });
     }
 
     const student = await Student.findByIdAndUpdate(
       req.studentId,
       {
-        $set: {
-          name: str(name),
-          email: normalizedEmail,
-          phone: str(phone),
-          college: str(college),
-          course: str(course),
-          year: year || "1st Year",
-        },
+        name: name.trim(),
+        email: normalizedEmail,
+        phone: phone || "",
+        college: college || "",
+        course: course || "",
+        year: year || "2nd Year",
       },
-      { new: true, runValidators: true },
+      {
+        new: true,
+        runValidators: true,
+      },
     ).select("-password");
 
     if (!student) {
-      return res.status(404).json({ message: "Student not found" });
+      return res.status(404).json({
+        message: "Student not found",
+      });
     }
 
-    return res.json({
+    res.status(200).json({
       message: "Profile updated successfully",
       student,
     });
-  } catch (err) {
-    next(err);
+  } catch (error) {
+    console.error("Profile update error:", error);
+
+    res.status(500).json({
+      message: "Unable to update profile",
+    });
   }
 });
 
 // CHANGE PASSWORD
-router.put("/change-password", auth, async (req, res, next) => {
+router.put("/change-password", authMiddleware, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
     if (!currentPassword || !newPassword) {
       return res.status(400).json({
-        message: "Fill in both password fields",
+        message: "Enter both current and new passwords",
       });
     }
 
     if (newPassword.length < 6) {
       return res.status(400).json({
-        message: "New password must be at least 6 characters",
+        message: "New password must contain at least 6 characters",
       });
     }
 
     const student = await Student.findById(req.studentId);
 
     if (!student) {
-      return res.status(404).json({ message: "Student not found" });
+      return res.status(404).json({
+        message: "Student not found",
+      });
     }
 
-    const valid = await bcrypt.compare(currentPassword, student.password);
+    const isMatch = await bcrypt.compare(currentPassword, student.password);
 
-    if (!valid) {
+    if (!isMatch) {
       return res.status(400).json({
         message: "Current password is incorrect",
       });
     }
 
     student.password = await bcrypt.hash(newPassword, 10);
+
     await student.save();
 
-    return res.json({
+    res.status(200).json({
       message: "Password changed successfully",
     });
-  } catch (err) {
-    next(err);
+  } catch (error) {
+    console.error("Password change error:", error);
+
+    res.status(500).json({
+      message: "Unable to change password",
+    });
   }
 });
 

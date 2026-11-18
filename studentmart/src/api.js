@@ -3,23 +3,28 @@ export const API_URL = "http://localhost:5002/api";
 export async function api(path, options = {}) {
   const token = localStorage.getItem("token");
 
-  const res = await fetch(`${API_URL}${path}`, {
+  const isFormData = options.body instanceof FormData;
+
+  const headers = {
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options.headers || {}),
+  };
+
+  const response = await fetch(`${API_URL}${path}`, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers || {}),
-    },
+    headers,
   });
 
-  const data = await res.json().catch(() => ({}));
+  const data = await response.json().catch(() => ({}));
 
-  if (res.status === 401 && token) {
-    localStorage.removeItem("token");
-  }
+  if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("student");
+    }
 
-  if (!res.ok) {
-    throw new Error(data.message || "Request failed");
+    throw new Error(data.message || "Something went wrong. Please try again.");
   }
 
   return data;

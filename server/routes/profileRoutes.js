@@ -1,36 +1,38 @@
-
 const express = require("express");
-const User = require("../models/User");
-const authMiddleware = require("../middleware/authMiddleware");
+const Student = require("../models/Student.js");
+const authMiddleware = require("../middleware/authmiddleware.js");
 
 const router = express.Router();
 
-// Correct email validation pattern
+// Email validation
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Return user details without password
-const publicUser = (user) => ({
-  _id: user._id,
-  name: user.name,
-  email: user.email,
-  phone: user.phone,
-  department: user.department,
-  year: user.year,
-  address: user.address,
+// Return student details without password
+const publicStudent = (student) => ({
+  _id: student._id,
+  usn: student.usn,
+  name: student.name,
+  email: student.email,
+  phone: student.phone,
+  college: student.college,
+  course: student.course,
+  year: student.year,
 });
 
 // VIEW PROFILE
 router.get("/me", authMiddleware, async (req, res) => {
   try {
-    const user = await User.findById(req.userId).select("-password");
+    const student = await Student.findById(req.studentId).select("-password");
 
-    if (!user) {
+    if (!student) {
       return res.status(404).json({
-        message: "User not found.",
+        message: "Student not found.",
       });
     }
 
-    return res.json({ user: publicUser(user) });
+    return res.status(200).json({
+      student: publicStudent(student),
+    });
   } catch (error) {
     console.error("View profile error:", error);
 
@@ -43,7 +45,7 @@ router.get("/me", authMiddleware, async (req, res) => {
 // UPDATE PROFILE
 router.put("/me", authMiddleware, async (req, res) => {
   try {
-    const { name, email, phone, department, year, address } = req.body;
+    const { name, email, phone, college, course, year } = req.body;
 
     if (typeof name !== "string" || !name.trim()) {
       return res.status(400).json({
@@ -59,28 +61,28 @@ router.put("/me", authMiddleware, async (req, res) => {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    // Check whether another user already uses this email
-    const existingUser = await User.findOne({
+    // Check whether another student already uses this email
+    const existingStudent = await Student.findOne({
       email: normalizedEmail,
-      _id: { $ne: req.userId },
+      _id: { $ne: req.studentId },
     });
 
-    if (existingUser) {
+    if (existingStudent) {
       return res.status(409).json({
         message: "This email is already registered.",
       });
     }
 
-    const user = await User.findByIdAndUpdate(
-      req.userId,
+    const student = await Student.findByIdAndUpdate(
+      req.studentId,
       {
         $set: {
           name: name.trim(),
           email: normalizedEmail,
           phone: typeof phone === "string" ? phone.trim() : "",
-          department: typeof department === "string" ? department.trim() : "",
+          college: typeof college === "string" ? college.trim() : "",
+          course: typeof course === "string" ? course.trim() : "",
           year: typeof year === "string" ? year.trim() : "",
-          address: typeof address === "string" ? address.trim() : "",
         },
       },
       {
@@ -89,15 +91,15 @@ router.put("/me", authMiddleware, async (req, res) => {
       },
     ).select("-password");
 
-    if (!user) {
+    if (!student) {
       return res.status(404).json({
-        message: "User not found.",
+        message: "Student not found.",
       });
     }
 
-    return res.json({
+    return res.status(200).json({
       message: "Profile updated successfully.",
-      user: publicUser(user),
+      student: publicStudent(student),
     });
   } catch (error) {
     console.error("Update profile error:", error);

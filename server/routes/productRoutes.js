@@ -20,6 +20,18 @@ if (!fs.existsSync(uploadDirectory)) {
   fs.mkdirSync(uploadDirectory, { recursive: true });
 }
 
+// Check whether the logged-in user is an Admin
+function adminOnly(req, res, next) {
+  if (req.user?.role !== "admin") {
+    return res.status(403).json({
+      success: false,
+      message: "Only Admin users can perform this action.",
+    });
+  }
+
+  next();
+}
+
 // Multer storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -28,6 +40,7 @@ const storage = multer.diskStorage({
 
   filename: (req, file, cb) => {
     const extension = path.extname(file.originalname).toLowerCase();
+
     const uniqueName =
       Date.now() + "-" + Math.round(Math.random() * 1e9) + extension;
 
@@ -138,102 +151,154 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// ADD PRODUCT WITH IMAGE URL OR UPLOADED IMAGE
-router.post("/", authMiddleware, upload.single("image"), async (req, res) => {
-  try {
-    const {
-      name,
-      price,
-      category,
-      stock,
-      description,
-      imageUrl: submittedImageUrl,
-    } = req.body;
+// ADD PRODUCT - ADMIN ONLY
+router.post(
+  "/",
+  authMiddleware,
+  adminOnly,
+  upload.single("image"),
+  async (req, res) => {
+    try {
+      const {
+        name,
+        price,
+        category,
+        stock,
+        description,
+        imageUrl: submittedImageUrl,
+      } = req.body;
 
-    if (
-      !name?.trim() ||
-      price === undefined ||
-      !category?.trim() ||
-      stock === undefined ||
-      !description?.trim()
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Please fill all required product fields.",
-      });
-    }
-
-    const numericPrice = Number(price);
-    const numericStock = Number(stock);
-
-    if (!Number.isFinite(numericPrice) || numericPrice <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Enter a valid product price.",
-      });
-    }
-
-    if (!Number.isInteger(numericStock) || numericStock < 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Stock must be a non-negative whole number.",
-      });
-    }
-
-    // Use uploaded file if provided; otherwise use image URL
-    let imageUrl = "";
-
-    if (req.file) {
-      imageUrl = `/uploads/${req.file.filename}`;
-    } else if (submittedImageUrl?.trim()) {
-      try {
-        const parsedUrl = new URL(submittedImageUrl.trim());
-
-        if (!["http:", "https:"].includes(parsedUrl.protocol)) {
-          return res.status(400).json({
-            success: false,
-            message: "Please enter a valid HTTP or HTTPS image URL.",
-          });
-        }
-
-        imageUrl = parsedUrl.href;
-      } catch {
+      if (
+        !name?.trim() ||
+        price === undefined ||
+        !category?.trim() ||
+        stock === undefined ||
+        !description?.trim()
+      ) {
         return res.status(400).json({
           success: false,
-          message: "Please enter a valid image URL.",
+          message: "Please fill all required product fields.",
         });
       }
-    } else {
+
+      const numericPrice = Number(price);
+      const numericStock = Number(stock);
+
+      if (!Number.isFinite(numericPrice) || numericPrice <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Enter a valid product price.",
+        });
+      }
+
+      if (!Number.isInteger(numericStock) || numericStock < 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Stock must be a non-negative whole number.",
+        });
+      }
+
+      let imageUrl = "";
+
+      if (req.file) {
+        imageUrl = `/uploads/${req.file.filename}`;
+      } else if (submittedImageUrl?.trim()) {
+        try {
+          const parsedUrl = new URL(submittedImageUrl.trim());
+
+          if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+            return res.status(400).json({
+              success: false,
+              message: "Please enter a valid HTTP or HTTPS image URL.",
+            });
+          }
+
+          imageUrl = parsedUrl.href;
+        } catch {
+          return res.status(400).json({
+            success: false,
+            message: "Please enter a valid image URL.",
+          });
+        }
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: "Please provide an image URL or select an image file.",
+        });
+      }
+
+      const product = await Product.create({
+        name: name.trim(),
+        price: numericPrice,
+        category: category.trim(),
+        stock: numericStock,
+        imageUrl,
+        description: description.trim(),
+      });
+
+      res.status(201).json({
+        success: true,
+        message: "Product added successfully!",
+        product,
+      });
+    } catch (error) {
+      console.error("Add product error:", error);
+
+      if (req.file) {
+        fs.unlink(path.join(uploadDirectory, req.file.filename), () => {});
+      }
+
+      res.status(500).json({
+        success: false,
+        message: error.message || "Unable to add product.",
+      });
+    }
+  },
+);
+
+// DELETE PRODUCT - ADMIN ONLY
+router.delete("/:id", authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
-        message: "Please provide an image URL or select an image file.",
+        message: "Invalid product ID",
       });
     }
 
-    const product = await Product.create({
-      name: name.trim(),
-      price: numericPrice,
-      category: category.trim(),
-      stock: numericStock,
-      imageUrl,
-      description: description.trim(),
-    });
+    const product = await Product.findById(id);
 
-    res.status(201).json({
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    // Delete uploaded image from the uploads folder
+    if (product.imageUrl && product.imageUrl.startsWith("/uploads/")) {
+      const imageName = path.basename(product.imageUrl);
+      const imagePath = path.join(uploadDirectory, imageName);
+
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+      }
+    }
+
+    await Product.findByIdAndDelete(id);
+
+    res.status(200).json({
       success: true,
-      message: "Product added successfully!",
-      product,
+      message: "Product deleted successfully!",
     });
   } catch (error) {
-    console.error("Add product error:", error);
-
-    if (req.file) {
-      fs.unlink(path.join(uploadDirectory, req.file.filename), () => {});
-    }
+    console.error("Delete product error:", error);
 
     res.status(500).json({
       success: false,
-      message: error.message || "Unable to add product.",
+      message: "Unable to delete product.",
     });
   }
 });

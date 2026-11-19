@@ -6,7 +6,7 @@ import "./Products.css";
 
 const BACKEND_URL = API_URL.replace(/\/api\/?$/, "");
 
-// Backup images for other products
+// Backup images for products
 function getFallbackImage(product) {
   const name = String(product.name || "").toLowerCase();
 
@@ -48,20 +48,26 @@ function getProductImage(product) {
   return getFallbackImage(product);
 }
 
-// Scientific calculator price
+// Use actual MongoDB price
 function getProductPrice(product) {
-  const name = String(product.name || "").toLowerCase();
-
-  if (name.includes("scientific calculator")) {
-    return 899;
-  }
-
   const price = Number(product.price);
   return Number.isFinite(price) ? price : 0;
 }
 
 export default function Products() {
   const location = useLocation();
+
+  // Identify logged-in user
+  const [userRole] = useState(() => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      return user.role || localStorage.getItem("role") || "";
+    } catch {
+      return localStorage.getItem("role") || "";
+    }
+  });
+
+  const isAdmin = userRole === "admin";
 
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState("");
@@ -70,9 +76,12 @@ export default function Products() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [deletingId, setDeletingId] = useState("");
 
-  // Load products from MongoDB
+  // Load ALL products from MongoDB
   useEffect(() => {
+    let active = true;
+
     async function loadProducts() {
       try {
         setLoading(true);
@@ -80,49 +89,31 @@ export default function Products() {
 
         const data = await api("/products");
 
-        const allProducts = Array.isArray(data) ? data : data.products || [];
+        const allProducts = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.products)
+            ? data.products
+            : [];
 
-        // Show only one A4 Sheet product.
-        // Hide all Sports Water Bottle products.
-        const visibleProducts = [];
-        let a4SheetAdded = false;
-
-        allProducts.forEach((product) => {
-          const name = String(product.name || "")
-            .toLowerCase()
-            .replace(/\s+/g, " ")
-            .trim();
-
-          // Hide Sports Water Bottle
-          if (
-            name.includes("sports water bottle") ||
-            name.includes("sports bottle") ||
-            name.includes("sports sipper")
-          ) {
-            return;
-          }
-
-          // Allow only the first A4 Sheet
-          if (name.includes("a4 sheet")) {
-            if (a4SheetAdded) {
-              return;
-            }
-
-            a4SheetAdded = true;
-          }
-
-          visibleProducts.push(product);
-        });
-
-        setProducts(visibleProducts);
+        if (active) {
+          setProducts(allProducts);
+        }
       } catch (err) {
-        setError(err.message || "Unable to load products.");
+        if (active) {
+          setError(err.message || "Unable to load products.");
+        }
       } finally {
-        setLoading(false);
+        if (active) {
+          setLoading(false);
+        }
       }
     }
 
     loadProducts();
+
+    return () => {
+      active = false;
+    };
   }, [location.key]);
 
   // Get categories
@@ -141,7 +132,7 @@ export default function Products() {
       result = result.filter((product) =>
         String(product.name || "")
           .toLowerCase()
-          .includes(search.toLowerCase()),
+          .includes(search.trim().toLowerCase()),
       );
     }
 
@@ -189,6 +180,42 @@ export default function Products() {
       setTimeout(() => setMessage(""), 2500);
     } catch {
       setMessage("Unable to add product to cart.");
+    }
+  }
+
+  // DELETE PRODUCT - ADMIN ONLY
+  async function handleDeleteProduct(product) {
+    if (!isAdmin) {
+      setError("Only Admin users can delete products.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${product.name}?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setDeletingId(product._id);
+      setError("");
+      setMessage("");
+
+      const data = await api(`/products/${product._id}`, {
+        method: "DELETE",
+      });
+
+      setProducts((previousProducts) =>
+        previousProducts.filter((item) => item._id !== product._id),
+      );
+
+      setMessage(data.message || "Product deleted successfully!");
+    } catch (err) {
+      setError(err.message || "Unable to delete product.");
+    } finally {
+      setDeletingId("");
     }
   }
 
@@ -241,7 +268,8 @@ export default function Products() {
             Products
           </Link>
 
-          <Link to="/add-product">Add Product</Link>
+          {isAdmin && <Link to="/add-product">Add Product</Link>}
+
           <Link to="/cart">Shopping Cart</Link>
         </nav>
 
@@ -260,6 +288,20 @@ export default function Products() {
 
             <p>Find the stationery and study products you need.</p>
           </div>
+
+          {isAdmin && (
+            <Link
+              to="/add-product"
+              className="product-cart-button"
+              style={{
+                textDecoration: "none",
+                padding: "12px 18px",
+                display: "inline-block",
+              }}
+            >
+              + Add Product
+            </Link>
+          )}
         </header>
 
         {/* SEARCH AND FILTERS */}
@@ -299,6 +341,7 @@ export default function Products() {
 
         {error && <div className="products-alert error-alert">{error}</div>}
 
+        {/* PRODUCT COUNT */}
         <div className="products-list-heading">
           <div>
             <h2>Our Products</h2>
@@ -310,7 +353,9 @@ export default function Products() {
 
         {loading ? (
           <p>Loading products...</p>
-        ) : error ? null : filteredProducts.length === 0 ? (
+        ) : error && products.length === 0 ? (
+          <p>Unable to display products.</p>
+        ) : filteredProducts.length === 0 ? (
           <p>No products found.</p>
         ) : (
           <div className="product-grid">
@@ -379,6 +424,30 @@ export default function Products() {
                         Add to Cart
                       </button>
                     </div>
+
+                    {/* DELETE BUTTON - ADMIN ONLY */}
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        className="product-delete-button"
+                        onClick={() => handleDeleteProduct(product)}
+                        disabled={deletingId === product._id}
+                        style={{
+                          width: "100%",
+                          marginTop: "10px",
+                          padding: "10px",
+                          backgroundColor: "#c0392b",
+                          color: "#ffffff",
+                          border: "none",
+                          borderRadius: "6px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        {deletingId === product._id
+                          ? "Deleting..."
+                          : "Delete Product"}
+                      </button>
+                    )}
                   </div>
                 </article>
               );

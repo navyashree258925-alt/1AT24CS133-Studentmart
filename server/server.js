@@ -12,27 +12,25 @@ import productRoutes from "./routes/productRoutes.js";
 dotenv.config();
 
 const app = express();
-
 const PORT = process.env.PORT || 5002;
 
 // CURRENT DIRECTORY
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// CORS CONFIGURATION
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:5174",
-  "http://localhost:5175",
-  "http://localhost:5176",
-  process.env.CLIENT_URL,
-].filter(Boolean);
-
+// CORS CONFIGURATION - ALLOW ANY LOCALHOST PORT
 app.use(
   cors({
-    origin: allowedOrigins,
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    origin: (origin, callback) => {
+      if (!origin || /^http:\/\/localhost:\d+$/.test(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
   }),
 );
 

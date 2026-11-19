@@ -1,20 +1,28 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 
-import Login from "./components/login.jsx";
-import Register from "./components/register.jsx";
-import Dashboard from "./components/dashboard.jsx";
-import Profile from "./components/profile.jsx";
-import Products from "./components/products.jsx";
-import ProductForm from "./components/ProductForm.jsx";
-import ProductDetails from "./components/ProductDetails.jsx";
-import Cart from "./components/Cart.jsx";
+import Login from "./Components/login.jsx";
+import Register from "./Components/register.jsx";
+import Dashboard from "./Components/dashboard.jsx";
+import Profile from "./Components/profile.jsx";
+import Products from "./Components/products.jsx";
+import ProductForm from "./Components/ProductForm.jsx";
+import ProductDetails from "./Components/ProductDetails.jsx";
+import Cart from "./Components/Cart.jsx";
 
-// Check whether student is logged in
 function isLoggedIn() {
   return Boolean(localStorage.getItem("token"));
 }
 
-// Protected pages
+function getUserRole() {
+  try {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    return user.role || localStorage.getItem("role") || "";
+  } catch {
+    return localStorage.getItem("role") || "";
+  }
+}
+
+// Protect pages that require login
 function ProtectedRoute({ children }) {
   if (!isLoggedIn()) {
     return <Navigate to="/" replace />;
@@ -23,9 +31,22 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
-// Login and Register pages
+// Prevent logged-in users from opening Login/Register
 function PublicRoute({ children }) {
   if (isLoggedIn()) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+}
+
+// Only Admin can access Add Product
+function AdminRoute({ children }) {
+  if (!isLoggedIn()) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (getUserRole() !== "admin") {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -35,7 +56,6 @@ function PublicRoute({ children }) {
 export default function App() {
   return (
     <Routes>
-      {/* LOGIN PAGE - FIRST PAGE */}
       <Route
         path="/"
         element={
@@ -45,7 +65,6 @@ export default function App() {
         }
       />
 
-      {/* CREATE ACCOUNT PAGE */}
       <Route
         path="/register"
         element={
@@ -55,7 +74,6 @@ export default function App() {
         }
       />
 
-      {/* DASHBOARD */}
       <Route
         path="/dashboard"
         element={
@@ -65,7 +83,6 @@ export default function App() {
         }
       />
 
-      {/* MY PROFILE */}
       <Route
         path="/profile"
         element={
@@ -75,7 +92,6 @@ export default function App() {
         }
       />
 
-      {/* VIEW PRODUCTS */}
       <Route
         path="/products"
         element={
@@ -85,17 +101,16 @@ export default function App() {
         }
       />
 
-      {/* ADD PRODUCT */}
+      {/* ADMIN ONLY */}
       <Route
         path="/add-product"
         element={
-          <ProtectedRoute>
+          <AdminRoute>
             <ProductForm />
-          </ProtectedRoute>
+          </AdminRoute>
         }
       />
 
-      {/* PRODUCT DETAILS */}
       <Route
         path="/products/:id"
         element={
@@ -105,7 +120,6 @@ export default function App() {
         }
       />
 
-      {/* SHOPPING CART */}
       <Route
         path="/cart"
         element={
@@ -115,7 +129,6 @@ export default function App() {
         }
       />
 
-      {/* INVALID URL */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

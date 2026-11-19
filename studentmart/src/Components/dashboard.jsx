@@ -1,220 +1,391 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { api } from "../api.js";
 import Logout from "./Logout.jsx";
 import "./Dashboard.css";
 
-export default function Dashboard() {
-  const [cartCount, setCartCount] = useState(0);
+// Safely read saved user information
+function getSavedUser(key) {
+  try {
+    return JSON.parse(localStorage.getItem(key) || "{}");
+  } catch {
+    return {};
+  }
+}
 
-  const [student] = useState(() => {
+// Get product stock
+function getStock(product) {
+  const stock = Number(product.stock);
+  return Number.isFinite(stock) ? stock : 0;
+}
+
+// Get product price
+function getPrice(product) {
+  const price = Number(product.price);
+  return Number.isFinite(price) ? price : 0;
+}
+
+// Product table component
+function ProductTable({ items, showPrice = true }) {
+  if (!items || items.length === 0) {
+    return <div className="stat-detail-empty">No products found.</div>;
+  }
+
+  return (
+    <div className="stat-detail-table-wrapper">
+      <table className="stat-detail-table">
+        <thead>
+          <tr>
+            <th>Product Name</th>
+            <th>Category</th>
+            {showPrice && <th>Price</th>}
+            <th>Stock</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {items.map((product, index) => (
+            <tr key={product._id || index}>
+              <td>{product.name || "Unnamed Product"}</td>
+              <td>{product.category || "Uncategorized"}</td>
+
+              {showPrice && <td>₹{getPrice(product).toFixed(2)}</td>}
+
+              <td>{getStock(product)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export default function Dashboard() {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [selectedStat, setSelectedStat] = useState("");
+
+  // Get saved login information
+  const student = getSavedUser("student");
+  const admin = getSavedUser("admin");
+
+  // Identify the logged-in account
+  const role = String(
+    localStorage.getItem("role") ||
+      admin.role ||
+      student.role ||
+      (Object.keys(admin).length > 0 ? "admin" : "student"),
+  ).toLowerCase();
+
+  const isAdmin = role === "admin";
+
+  // Fetch products from MongoDB
+  useEffect(() => {
+    let active = true;
+
+    async function fetchProducts() {
+      try {
+        setLoading(true);
+        setError("");
+
+        const data = await api("/products");
+
+        const allProducts = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.products)
+            ? data.products
+            : [];
+
+        if (active) {
+          setProducts(allProducts);
+        }
+      } catch (err) {
+        if (active) {
+          setError(err.message || "Unable to load products.");
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchProducts();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Total number of products
+  const totalProducts = products.length;
+
+  // Total available units
+  const unitsInStock = products.reduce(
+    (total, product) => total + getStock(product),
+    0,
+  );
+
+  // Group products by category
+  const categoryGroups = useMemo(() => {
+    const groups = {};
+
+    products.forEach((product) => {
+      const category = product.category || "Uncategorized";
+
+      if (!groups[category]) {
+        groups[category] = [];
+      }
+
+      groups[category].push(product);
+    });
+
+    return groups;
+  }, [products]);
+
+  const categoriesCount = Object.keys(categoryGroups).length;
+
+  // Products having stock of 5 or less
+  const lowStockProducts = products.filter((product) => getStock(product) <= 5);
+
+  // Cart count
+  const [cartCount, setCartCount] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem("student") || "null");
+      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+
+      return cart.reduce(
+        (total, item) => total + Number(item.quantity || 0),
+        0,
+      );
     } catch {
-      return null;
+      return 0;
     }
   });
 
+  // Update cart count when cart changes
   useEffect(() => {
-    const updateCartCount = () => {
+    function updateCartCount() {
       try {
         const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-        const count = cart.reduce(
-          (total, item) => total + Number(item.quantity || 1),
-          0,
+
+        setCartCount(
+          cart.reduce((total, item) => total + Number(item.quantity || 0), 0),
         );
-        setCartCount(count);
       } catch {
         setCartCount(0);
       }
-    };
+    }
 
-    updateCartCount();
     window.addEventListener("storage", updateCartCount);
+    window.addEventListener("cartUpdated", updateCartCount);
 
     return () => {
       window.removeEventListener("storage", updateCartCount);
+      window.removeEventListener("cartUpdated", updateCartCount);
     };
   }, []);
+
+  // Dashboard statistics
+  const statistics = [
+    {
+      id: "total",
+      title: "Total Products",
+      value: totalProducts,
+      description: "View all products",
+    },
+    {
+      id: "stock",
+      title: "Units in Stock",
+      value: unitsInStock,
+      description: "View product stock",
+    },
+    {
+      id: "categories",
+      title: "Categories",
+      value: categoriesCount,
+      description: "View product categories",
+    },
+    {
+      id: "low",
+      title: "Low Stock Items",
+      value: lowStockProducts.length,
+      description: "Products with stock 5 or less",
+    },
+  ];
+
+  // Display selected statistic details
+  function renderStatDetails() {
+    if (selectedStat === "total") {
+      return <ProductTable items={products} />;
+    }
+
+    if (selectedStat === "stock") {
+      return <ProductTable items={products} showPrice={false} />;
+    }
+
+    if (selectedStat === "low") {
+      return <ProductTable items={lowStockProducts} />;
+    }
+
+    if (selectedStat === "categories") {
+      return (
+        <div className="stat-details-list">
+          {Object.entries(categoryGroups).map(([category, items]) => (
+            <div className="stat-detail-item" key={category}>
+              <div>
+                <strong>{category}</strong>
+                <p>{items.length} product(s)</p>
+              </div>
+
+              <div className="stat-detail-value">
+                {items.map((product, index) => (
+                  <div key={product._id || index}>
+                    {product.name || "Unnamed Product"} — Stock:{" "}
+                    {getStock(product)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    return null;
+  }
+
+  const selectedTitle =
+    statistics.find((item) => item.id === selectedStat)?.title || "";
 
   return (
     <div className="workspace">
       {/* SIDEBAR */}
       <aside className="sidebar">
-        <div className="sidebar-brand-box">
-          <div className="sidebar-logo-icon">S</div>
-          <h2 className="sidebar-brand">StudentMart</h2>
+        <div className="sidebar-logo">
+          <h2>StudentMart</h2>
+          <p>Campus Shopping</p>
         </div>
-
-        <p className="sidebar-heading">STUDENT WORKSPACE</p>
 
         <nav className="sidebar-nav">
           <Link to="/dashboard" className="active">
-            <span>⌂</span>
             Dashboard
           </Link>
 
-          {/* SECOND: MY PROFILE */}
-          <Link to="/profile">
-            <span>♙</span>
-            My Profile
-          </Link>
+          <Link to="/profile">My Profile</Link>
 
-          {/* THIRD: VIEW PRODUCTS */}
-          <Link to="/products">
-            <span>▣</span>
-            View Products
-          </Link>
+          <Link to="/products">Products</Link>
 
-          <Link to="/add-product">
-            <span>＋</span>
-            Add Product
-          </Link>
+          {isAdmin && <Link to="/add-product">Add Product</Link>}
 
-          <Link to="/cart">
-            <span>🛒</span>
-            Shopping Cart
-            <span className="cart-count">{cartCount}</span>
-          </Link>
+          {!isAdmin && <Link to="/cart">Shopping Cart ({cartCount})</Link>}
         </nav>
 
-        <div className="sidebar-bottom">
-          <div className="sidebar-message">
-            <span>✦</span>
-            <p>Your student marketplace, all in one place.</p>
-          </div>
-
-          <div className="sidebar-logout">
-            <Logout />
-          </div>
+        <div className="sidebar-logout">
+          <Logout />
         </div>
       </aside>
 
-      {/* MAIN DASHBOARD */}
-      <main className="workspace-content dashboard-content">
-        {/* HEADER */}
-        <header className="dashboard-header">
-          <div>
-            <p className="header-small">STUDENTMART / OVERVIEW</p>
-            <h1>Dashboard</h1>
-            <p className="header-subtitle">
-              Your personal student shopping space.
-            </p>
-          </div>
-
-          {student?.usn && (
-            <div className="student-usn">
-              <span className="usn-circle">S</span>
-              <div>
-                <small>STUDENT USN</small>
-                <strong>{student.usn}</strong>
-              </div>
-            </div>
-          )}
-        </header>
-
+      {/* MAIN CONTENT */}
+      <main className="dashboard-main">
         {/* WELCOME BANNER */}
         <section className="welcome-banner">
-          <div className="welcome-content">
-            <span className="welcome-label">✦ YOUR SPACE. YOUR JOURNEY.</span>
+          <h1>Welcome to StudentMart!</h1>
 
-            <h2>Hello, {student?.name || "Student"}!</h2>
-
-            <p>
-              Welcome to StudentMart. Manage your student profile, explore
-              useful products and enjoy your shopping experience.
-            </p>
-
-            <Link to="/profile" className="welcome-button">
-              View My Profile <span>→</span>
-            </Link>
-          </div>
-
-          <div className="welcome-art">
-            <div className="art-circle art-circle-one"></div>
-            <div className="art-circle art-circle-two"></div>
-            <div className="art-center">
-              <span>✦</span>
-            </div>
-            <span className="art-star star-one">✧</span>
-            <span className="art-star star-two">✦</span>
-          </div>
-
-          <div className="banner-bottom-text">
-            MAKE EVERY STUDENT DAY EASIER
-          </div>
+          <p>Manage your campus shopping activities from one place.</p>
         </section>
 
-        {/* QUICK ACCESS */}
-        <section className="quick-section">
+        {/* FIRST ROW: FOUR STATISTICS CARDS */}
+        <section className="dashboard-section">
           <div className="section-heading">
-            <div>
-              <span className="section-eyebrow">YOUR ACTIVITIES</span>
-              <h2>Your Workspace</h2>
-              <p>Everything you need, just one click away.</p>
-            </div>
-            <span className="section-decoration">✦</span>
+            <h2>Dashboard Overview</h2>
+
+            <p>Click a card to view its details.</p>
           </div>
 
-          <div className="quick-cards">
-            <Link to="/profile" className="quick-card">
-              <div className="quick-card-top">
-                <div className="quick-icon">♙</div>
-                <span className="quick-number">01</span>
-              </div>
+          {loading ? (
+            <p>Loading dashboard statistics...</p>
+          ) : error ? (
+            <p className="error-message">{error}</p>
+          ) : (
+            <div className="stats-grid">
+              {statistics.map((stat) => (
+                <button
+                  type="button"
+                  key={stat.id}
+                  className={`stat-card ${
+                    selectedStat === stat.id ? "selected" : ""
+                  }`}
+                  onClick={() =>
+                    setSelectedStat(selectedStat === stat.id ? "" : stat.id)
+                  }
+                >
+                  <h3>{stat.title}</h3>
 
+                  <div className="stat-number">{stat.value}</div>
+
+                  <p>{stat.description}</p>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* SELECTED STATISTIC DETAILS */}
+        {selectedStat && !loading && !error && (
+          <section className="stat-details">
+            <div className="stat-details-header">
+              <h2>{selectedTitle}</h2>
+
+              <button
+                type="button"
+                className="stat-details-close"
+                onClick={() => setSelectedStat("")}
+              >
+                Close
+              </button>
+            </div>
+
+            {renderStatDetails()}
+          </section>
+        )}
+
+        {/* SECOND ROW: THREE QUICK ACTION CARDS */}
+        <section className="dashboard-section">
+          <div className="section-heading">
+            <h2>Quick Actions</h2>
+
+            <p>Choose what you want to do next.</p>
+          </div>
+
+          <div className="actions-grid">
+            <Link to="/products" className="action-card">
+              <h3>Browse Products</h3>
+              <p>Explore available products.</p>
+            </Link>
+
+            {isAdmin ? (
+              <Link to="/add-product" className="action-card">
+                <h3>Add a Product</h3>
+                <p>Add new products to StudentMart.</p>
+              </Link>
+            ) : (
+              <Link to="/cart" className="action-card">
+                <h3>Shopping Cart</h3>
+                <p>View your selected products ({cartCount}).</p>
+              </Link>
+            )}
+
+            <Link to="/profile" className="action-card">
               <h3>My Profile</h3>
-
-              <p>
-                View your student information and keep your personal details
-                updated.
-              </p>
-
-              <div className="quick-card-link">
-                Manage Profile <span>→</span>
-              </div>
-            </Link>
-
-            <Link to="/add-product" className="quick-card">
-              <div className="quick-card-top">
-                <div className="quick-icon">＋</div>
-                <span className="quick-number">02</span>
-              </div>
-
-              <h3>Add Product</h3>
-
-              <p>
-                Share a new product with the StudentMart student marketplace.
-              </p>
-
-              <div className="quick-card-link">
-                Add Product <span>→</span>
-              </div>
-            </Link>
-
-            <Link to="/cart" className="quick-card">
-              <div className="quick-card-top">
-                <div className="quick-icon">🛍</div>
-                <span className="quick-number">03</span>
-              </div>
-
-              <h3>Shopping Cart</h3>
-
-              <p>
-                You currently have {cartCount} item(s) in your shopping cart.
-              </p>
-
-              <div className="quick-card-link">
-                View Cart <span>→</span>
-              </div>
+              <p>View and update your profile.</p>
             </Link>
           </div>
         </section>
 
-        {/* BOTTOM MESSAGE */}
+        {/* FOOTER */}
         <footer className="dashboard-footer">
-          <span>✦</span>
-          <p>StudentMart — A smarter marketplace for students.</p>
-          <span className="footer-right">STUDENT EDITION</span>
+          <p>© {new Date().getFullYear()} StudentMart. All rights reserved.</p>
         </footer>
       </main>
     </div>
